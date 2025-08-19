@@ -18,11 +18,51 @@ export interface YahooFinanceData {
   regularMarketPrice?: number;
 }
 
+export interface DividendData {
+  symbol: string;
+  exDate: Date;
+  paymentDate: Date;
+  amount: number;
+  currency: string;
+}
+
+export interface DividendCalendarItem {
+  stock: StockData;
+  dividend: DividendData;
+  totalDividend: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class StockService {
   private readonly STORAGE_KEY = 'stock_registrations';
+
+  // Mock dividend data - in production, this would come from Yahoo Finance API
+  private mockDividendData: DividendData[] = [
+    // AAPL quarterly dividends
+    { symbol: 'AAPL', exDate: new Date('2025-11-08'), paymentDate: new Date('2025-11-14'), amount: 0.24, currency: 'USD' },
+    { symbol: 'AAPL', exDate: new Date('2026-02-07'), paymentDate: new Date('2026-02-13'), amount: 0.25, currency: 'USD' },
+    { symbol: 'AAPL', exDate: new Date('2026-05-09'), paymentDate: new Date('2026-05-15'), amount: 0.25, currency: 'USD' },
+    { symbol: 'AAPL', exDate: new Date('2026-08-08'), paymentDate: new Date('2026-08-14'), amount: 0.26, currency: 'USD' },
+    // GOOGL quarterly dividends  
+    { symbol: 'GOOGL', exDate: new Date('2025-12-13'), paymentDate: new Date('2025-12-19'), amount: 0.20, currency: 'USD' },
+    { symbol: 'GOOGL', exDate: new Date('2026-03-14'), paymentDate: new Date('2026-03-20'), amount: 0.21, currency: 'USD' },
+    { symbol: 'GOOGL', exDate: new Date('2026-06-13'), paymentDate: new Date('2026-06-19'), amount: 0.21, currency: 'USD' },
+    { symbol: 'GOOGL', exDate: new Date('2026-09-12'), paymentDate: new Date('2026-09-18'), amount: 0.22, currency: 'USD' },
+    // MSFT quarterly dividends
+    { symbol: 'MSFT', exDate: new Date('2025-11-20'), paymentDate: new Date('2025-12-12'), amount: 0.75, currency: 'USD' },
+    { symbol: 'MSFT', exDate: new Date('2026-02-19'), paymentDate: new Date('2026-03-12'), amount: 0.78, currency: 'USD' },
+    { symbol: 'MSFT', exDate: new Date('2026-05-21'), paymentDate: new Date('2026-06-11'), amount: 0.78, currency: 'USD' },
+    { symbol: 'MSFT', exDate: new Date('2026-08-20'), paymentDate: new Date('2026-09-10'), amount: 0.80, currency: 'USD' },
+    // Japanese stocks - semi-annual dividends
+    { symbol: '7203.T', exDate: new Date('2026-03-28'), paymentDate: new Date('2026-06-27'), amount: 75, currency: 'JPY' },
+    { symbol: '7203.T', exDate: new Date('2026-09-30'), paymentDate: new Date('2026-12-05'), amount: 75, currency: 'JPY' },
+    { symbol: '6758.T', exDate: new Date('2026-03-30'), paymentDate: new Date('2026-06-27'), amount: 45, currency: 'JPY' },
+    { symbol: '6758.T', exDate: new Date('2026-09-30'), paymentDate: new Date('2026-12-05'), amount: 45, currency: 'JPY' },
+    { symbol: '9984.T', exDate: new Date('2026-03-30'), paymentDate: new Date('2026-06-27'), amount: 55, currency: 'JPY' },
+    { symbol: '9984.T', exDate: new Date('2026-09-30'), paymentDate: new Date('2026-12-05'), amount: 55, currency: 'JPY' }
+  ];
 
   constructor(private http: HttpClient) {}
 
@@ -81,5 +121,72 @@ export class StockService {
   // Generate unique ID
   private generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  // Get upcoming dividends for the next 12 months
+  getUpcomingDividends(): DividendCalendarItem[] {
+    const registeredStocks = this.getRegisteredStocks();
+    const now = new Date();
+    const twelveMonthsFromNow = new Date();
+    twelveMonthsFromNow.setFullYear(now.getFullYear() + 1);
+
+    const upcomingDividends: DividendCalendarItem[] = [];
+
+    registeredStocks.forEach(stock => {
+      const stockDividends = this.mockDividendData.filter(dividend => 
+        dividend.symbol === stock.symbol &&
+        dividend.paymentDate >= now &&
+        dividend.paymentDate <= twelveMonthsFromNow
+      );
+
+      stockDividends.forEach(dividend => {
+        upcomingDividends.push({
+          stock: stock,
+          dividend: dividend,
+          totalDividend: dividend.amount * stock.quantity
+        });
+      });
+    });
+
+    // Sort by payment date
+    return upcomingDividends.sort((a, b) => a.dividend.paymentDate.getTime() - b.dividend.paymentDate.getTime());
+  }
+
+  // Calculate total expected dividends for next 12 months
+  getTotalUpcomingDividends(): { jpy: number, usd: number } {
+    const upcomingDividends = this.getUpcomingDividends();
+    let totalJPY = 0;
+    let totalUSD = 0;
+
+    upcomingDividends.forEach(item => {
+      if (item.dividend.currency === 'JPY') {
+        totalJPY += item.totalDividend;
+      } else if (item.dividend.currency === 'USD') {
+        totalUSD += item.totalDividend;
+      }
+    });
+
+    return { jpy: totalJPY, usd: totalUSD };
+  }
+
+  // Get dividends by month for charting/calendar view
+  getDividendsByMonth(): { [month: string]: DividendCalendarItem[] } {
+    const upcomingDividends = this.getUpcomingDividends();
+    const dividendsByMonth: { [month: string]: DividendCalendarItem[] } = {};
+
+    upcomingDividends.forEach(dividend => {
+      const monthKey = dividend.dividend.paymentDate.toLocaleDateString('ja-JP', { 
+        year: 'numeric', 
+        month: 'long' 
+      });
+      
+      if (!dividendsByMonth[monthKey]) {
+        dividendsByMonth[monthKey] = [];
+      }
+      
+      dividendsByMonth[monthKey].push(dividend);
+    });
+
+    return dividendsByMonth;
   }
 }

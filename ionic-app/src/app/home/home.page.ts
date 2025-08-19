@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { StockService, StockData, YahooFinanceData } from '../services/stock.service';
+import { StockService, StockData, YahooFinanceData, DividendCalendarItem } from '../services/stock.service';
 
 @Component({
   selector: 'app-home',
@@ -16,10 +16,16 @@ export class HomePage implements OnInit {
   registeredStocks: StockData[] = [];
   showSearchResults: boolean = false;
 
+  // Dividend calendar data
+  upcomingDividends: DividendCalendarItem[] = [];
+  totalUpcomingDividends: { jpy: number, usd: number } = { jpy: 0, usd: 0 };
+  dividendsByMonth: { [month: string]: DividendCalendarItem[] } = {};
+
   constructor(private stockService: StockService) {}
 
   ngOnInit() {
     this.loadRegisteredStocks();
+    this.loadDividendData();
   }
 
   // Search for stocks using the service
@@ -57,6 +63,7 @@ export class HomePage implements OnInit {
 
       this.stockService.registerStock(stockData);
       this.loadRegisteredStocks();
+      this.loadDividendData(); // Refresh dividend data when stocks change
       this.resetForm();
     }
   }
@@ -66,10 +73,18 @@ export class HomePage implements OnInit {
     this.registeredStocks = this.stockService.getRegisteredStocks();
   }
 
+  // Load dividend data
+  loadDividendData() {
+    this.upcomingDividends = this.stockService.getUpcomingDividends();
+    this.totalUpcomingDividends = this.stockService.getTotalUpcomingDividends();
+    this.dividendsByMonth = this.stockService.getDividendsByMonth();
+  }
+
   // Remove a registered stock
   removeStock(id: string) {
     this.stockService.removeStock(id);
     this.loadRegisteredStocks();
+    this.loadDividendData(); // Refresh dividend data when stocks change
   }
 
   // Reset the form
@@ -90,5 +105,20 @@ export class HomePage implements OnInit {
   // Calculate total value for a stock
   getTotalValue(stock: StockData): number {
     return stock.price * stock.quantity;
+  }
+
+  // Get month names for dividend calendar
+  getMonthNames(): string[] {
+    return Object.keys(this.dividendsByMonth);
+  }
+
+  // Format currency for display
+  formatCurrency(amount: number, currency: string): string {
+    if (currency === 'JPY') {
+      return `¥${amount.toLocaleString('ja-JP')}`;
+    } else if (currency === 'USD') {
+      return `$${amount.toFixed(2)}`;
+    }
+    return `${amount.toFixed(2)} ${currency}`;
   }
 }
