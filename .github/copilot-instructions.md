@@ -79,7 +79,7 @@ The application is configured as a Progressive Web App with:
 Live PWA available at: https://deno78.github.io/vibetest/
 
 ### Environment Requirements
-- **Node.js**: 16+ (tested with 20.x)
+- **Node.js**: 20+ (tested with 20.x)
 - **npm**: Latest version
 - **Ionic CLI**: 7.2.1 (install globally with `npm install -g @ionic/cli`)
 - **Capacitor CLI**: 7.4.2 (included in dependencies)
