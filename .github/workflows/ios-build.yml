@@ -1,0 +1,114 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'ionic-app/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'ionic-app/**'
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    
+    defaults:
+      run:
+        working-directory: ionic-app
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: ionic-app/package-lock.json
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build web app
+      run: npm run build
+      
+    - name: Setup iOS environment
+      run: |
+        # Update CocoaPods
+        sudo gem install cocoapods
+        
+    - name: Sync Capacitor
+      run: npx cap sync ios
+      
+    - name: Install iOS dependencies
+      run: |
+        cd ios/App
+        pod install
+        
+    - name: Build iOS app
+      run: |
+        cd ios/App
+        xcodebuild -workspace App.xcworkspace \
+          -scheme App \
+          -configuration Release \
+          -destination generic/platform=iOS \
+          -archivePath App.xcarchive \
+          archive
+          
+    - name: Export IPA
+      run: |
+        cd ios/App
+        # Create export options plist for Ad Hoc distribution
+        cat > ExportOptions.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>method</key>
+          <string>development</string>
+          <key>teamID</key>
+          <string>\${{ secrets.APPLE_TEAM_ID }}</string>
+          <key>compileBitcode</key>
+          <false/>
+          <key>stripSwiftSymbols</key>
+          <true/>
+          <key>uploadBitcode</key>
+          <false/>
+          <key>uploadSymbols</key>
+          <true/>
+        </dict>
+        </plist>
+        EOF
+        
+        # Export archive to IPA (requires valid provisioning profile)
+        if [ -n "\${{ secrets.APPLE_TEAM_ID }}" ]; then
+          xcodebuild -exportArchive \
+            -archivePath App.xcarchive \
+            -exportPath ./build \
+            -exportOptionsPlist ExportOptions.plist
+        else
+          echo "⚠️  Apple Team ID not configured. Skipping IPA export."
+          echo "To export IPA, add APPLE_TEAM_ID to repository secrets."
+        fi
+        
+    - name: Upload iOS artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-app
+        path: |
+          ionic-app/ios/App/App.xcarchive
+          ionic-app/ios/App/build/*.ipa
+        retention-days: 30
+        
+    - name: Upload build logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-build-logs
+        path: |
+          ionic-app/ios/App/build/Logs
+        retention-days: 7
