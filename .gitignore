@@ -1,0 +1,14 @@
+# Ionic project build artifacts and dependencies
+ionic-app/node_modules/
+ionic-app/www/
+ionic-app/.angular/
+ionic-app/.ionic/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
