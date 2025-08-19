@@ -11,7 +11,12 @@
     "lint": "ng lint",
     "e2e": "ng e2e",
     "ionic:build": "ng build",
-    "ionic:serve": "ng serve"
+    "ionic:serve": "ng serve",
+    "android": "cap run android",
+    "ios": "cap run ios",
+    "build:mobile": "ionic build && cap sync",
+    "open:android": "cap open android",
+    "open:ios": "cap open ios"
   },
   "keywords": [
     "ionic",
