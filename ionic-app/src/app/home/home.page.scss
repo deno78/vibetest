@@ -45,3 +45,49 @@ ion-item {
   --padding-start: 16px;
   --padding-end: 16px;
 }
+
+.dividend-summary {
+  background: var(--ion-color-light);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+
+  h4 {
+    margin: 0 0 8px 0;
+    color: var(--ion-color-primary);
+  }
+
+  p {
+    margin: 4px 0;
+    font-weight: 500;
+  }
+}
+
+.dividend-calendar {
+  .month-section {
+    margin-bottom: 16px;
+
+    h5 {
+      margin: 0 0 8px 0;
+      color: var(--ion-color-dark);
+      font-weight: 600;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--ion-color-light);
+    }
+
+    h6 {
+      margin: 0;
+      font-weight: 600;
+    }
+
+    ion-list {
+      background: transparent;
+    }
+
+    ion-item {
+      --background: var(--ion-color-step-50);
+      margin-bottom: 4px;
+      border-radius: 4px;
+    }
+  }
+}

@@ -97,6 +97,50 @@
       </ion-card-content>
     </ion-card>
 
+    <!-- Dividend Calendar -->
+    <ion-card *ngIf="registeredStocks.length > 0">
+      <ion-card-header>
+        <ion-card-title>配当金カレンダー</ion-card-title>
+        <ion-card-subtitle>今後12ヶ月の配当金予定</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <!-- Total Expected Dividends -->
+        <div class="dividend-summary">
+          <h4>合計予想配当金</h4>
+          <p *ngIf="totalUpcomingDividends.jpy > 0">
+            日本円: {{formatCurrency(totalUpcomingDividends.jpy, 'JPY')}}
+          </p>
+          <p *ngIf="totalUpcomingDividends.usd > 0">
+            米ドル: {{formatCurrency(totalUpcomingDividends.usd, 'USD')}}
+          </p>
+          <p *ngIf="totalUpcomingDividends.jpy === 0 && totalUpcomingDividends.usd === 0">
+            今後12ヶ月間の配当金予定はありません。
+          </p>
+        </div>
+
+        <!-- Monthly Dividend Breakdown -->
+        <div *ngIf="getMonthNames().length > 0" class="dividend-calendar">
+          <h4>月別配当金予定</h4>
+          <div *ngFor="let month of getMonthNames()" class="month-section">
+            <h5>{{month}}</h5>
+            <ion-list>
+              <ion-item *ngFor="let item of dividendsByMonth[month]">
+                <ion-label>
+                  <h6>{{item.stock.symbol}} - {{item.stock.companyName}}</h6>
+                  <p>
+                    支払日: {{item.dividend.paymentDate | date:'yyyy/MM/dd'}} | 
+                    配当金: {{formatCurrency(item.dividend.amount, item.dividend.currency)}} × {{item.stock.quantity}}株 = 
+                    {{formatCurrency(item.totalDividend, item.dividend.currency)}}
+                  </p>
+                </ion-label>
+              </ion-item>
+            </ion-list>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
     <!-- Registered Stocks List -->
     <ion-card *ngIf="registeredStocks.length > 0">
       <ion-card-header>
