@@ -1,7 +1,7 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Blank
+      株価コード登録
     </ion-title>
   </ion-toolbar>
 </ion-header>
@@ -9,12 +9,133 @@
 <ion-content [fullscreen]="true">
   <ion-header collapse="condense">
     <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
+      <ion-title size="large">株価コード登録</ion-title>
     </ion-toolbar>
   </ion-header>
 
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+  <div class="container">
+    <!-- Stock Registration Form -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>株式登録</ion-card-title>
+        <ion-card-subtitle>株式コードまたは会社名で検索</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <!-- Stock Search Input -->
+        <ion-item>
+          <ion-label position="floating">株式コード / 会社名</ion-label>
+          <ion-input 
+            [(ngModel)]="searchQuery" 
+            (ionInput)="onSearchInput()"
+            placeholder="例: AAPL, Apple, 7203.T, Toyota">
+          </ion-input>
+        </ion-item>
+
+        <!-- Search Results -->
+        <ion-list *ngIf="showSearchResults">
+          <ion-item 
+            button 
+            *ngFor="let stock of searchResults" 
+            (click)="selectStock(stock)">
+            <ion-label>
+              <h3>{{stock.symbol}}</h3>
+              <p>{{stock.shortName}}</p>
+              <p *ngIf="stock.regularMarketPrice">¥{{stock.regularMarketPrice | number:'1.2-2'}}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        <!-- Selected Stock Info -->
+        <div *ngIf="selectedStock" class="selected-stock">
+          <ion-item>
+            <ion-label>
+              <h3>選択された株式</h3>
+              <p>{{selectedStock.symbol}} - {{selectedStock.shortName}}</p>
+            </ion-label>
+          </ion-item>
+        </div>
+
+        <!-- Quantity Input -->
+        <ion-item>
+          <ion-label position="floating">数量</ion-label>
+          <ion-input 
+            type="number" 
+            [(ngModel)]="quantity" 
+            min="1"
+            placeholder="1">
+          </ion-input>
+        </ion-item>
+
+        <!-- Price Input -->
+        <ion-item>
+          <ion-label position="floating">株価 (¥)</ion-label>
+          <ion-input 
+            type="number" 
+            [(ngModel)]="customPrice" 
+            min="0.01"
+            step="0.01"
+            placeholder="現在価格または手動入力">
+          </ion-input>
+        </ion-item>
+
+        <!-- Register Button -->
+        <ion-button 
+          expand="block" 
+          [disabled]="!isFormValid()"
+          (click)="registerStock()"
+          class="register-button">
+          登録
+        </ion-button>
+
+        <ion-button 
+          expand="block" 
+          fill="clear" 
+          (click)="resetForm()">
+          リセット
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Registered Stocks List -->
+    <ion-card *ngIf="registeredStocks.length > 0">
+      <ion-card-header>
+        <ion-card-title>登録済み株式</ion-card-title>
+        <ion-card-subtitle>{{registeredStocks.length}}件の登録</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let stock of registeredStocks">
+            <ion-label>
+              <h3>{{stock.symbol}}</h3>
+              <p>{{stock.companyName}}</p>
+              <p>
+                数量: {{stock.quantity}} | 
+                単価: ¥{{stock.price | number:'1.2-2'}} | 
+                総額: ¥{{getTotalValue(stock) | number:'1.2-2'}}
+              </p>
+              <p class="registration-date">
+                登録日: {{stock.registeredAt | date:'yyyy/MM/dd HH:mm'}}
+              </p>
+            </ion-label>
+            <ion-button 
+              fill="clear" 
+              color="danger" 
+              (click)="removeStock(stock.id)">
+              <ion-icon name="trash"></ion-icon>
+            </ion-button>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Empty State -->
+    <ion-card *ngIf="registeredStocks.length === 0">
+      <ion-card-content class="empty-state">
+        <p>まだ株式が登録されていません。</p>
+        <p>上記のフォームから株式を検索して登録してください。</p>
+      </ion-card-content>
+    </ion-card>
   </div>
 </ion-content>
