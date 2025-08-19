@@ -3,88 +3,41 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
-export interface StockData {
-  id: string;
-  symbol: string;
-  companyName: string;
-  price: number;
-  quantity: number;
-  registeredAt: Date;
-}
-
-export interface YahooFinanceData {
-  symbol: string;
-  shortName: string;
-  regularMarketPrice?: number;
-}
-
-export interface DividendData {
-  symbol: string;
-  exDate: Date;
-  paymentDate: Date;
-  amount: number;
-  currency: string;
-}
-
-export interface DividendCalendarItem {
-  stock: StockData;
-  dividend: DividendData;
-  totalDividend: number;
-}
+import {
+  StockData,
+  YahooFinanceData,
+  DividendData,
+  DividendCalendarItem,
+  DividendTotals
+} from '../models';
+import { 
+  MOCK_STOCK_DATA, 
+  MOCK_DIVIDEND_DATA, 
+  STORAGE_KEYS, 
+  DATE_CONSTANTS 
+} from '../constants';
 
 @Injectable({
   providedIn: 'root'
 })
 export class StockService {
-  private readonly STORAGE_KEY = 'stock_registrations';
-
-  // Mock dividend data - in production, this would come from Yahoo Finance API
-  private mockDividendData: DividendData[] = [
-    // AAPL quarterly dividends
-    { symbol: 'AAPL', exDate: new Date('2025-11-08'), paymentDate: new Date('2025-11-14'), amount: 0.24, currency: 'USD' },
-    { symbol: 'AAPL', exDate: new Date('2026-02-07'), paymentDate: new Date('2026-02-13'), amount: 0.25, currency: 'USD' },
-    { symbol: 'AAPL', exDate: new Date('2026-05-09'), paymentDate: new Date('2026-05-15'), amount: 0.25, currency: 'USD' },
-    { symbol: 'AAPL', exDate: new Date('2026-08-08'), paymentDate: new Date('2026-08-14'), amount: 0.26, currency: 'USD' },
-    // GOOGL quarterly dividends  
-    { symbol: 'GOOGL', exDate: new Date('2025-12-13'), paymentDate: new Date('2025-12-19'), amount: 0.20, currency: 'USD' },
-    { symbol: 'GOOGL', exDate: new Date('2026-03-14'), paymentDate: new Date('2026-03-20'), amount: 0.21, currency: 'USD' },
-    { symbol: 'GOOGL', exDate: new Date('2026-06-13'), paymentDate: new Date('2026-06-19'), amount: 0.21, currency: 'USD' },
-    { symbol: 'GOOGL', exDate: new Date('2026-09-12'), paymentDate: new Date('2026-09-18'), amount: 0.22, currency: 'USD' },
-    // MSFT quarterly dividends
-    { symbol: 'MSFT', exDate: new Date('2025-11-20'), paymentDate: new Date('2025-12-12'), amount: 0.75, currency: 'USD' },
-    { symbol: 'MSFT', exDate: new Date('2026-02-19'), paymentDate: new Date('2026-03-12'), amount: 0.78, currency: 'USD' },
-    { symbol: 'MSFT', exDate: new Date('2026-05-21'), paymentDate: new Date('2026-06-11'), amount: 0.78, currency: 'USD' },
-    { symbol: 'MSFT', exDate: new Date('2026-08-20'), paymentDate: new Date('2026-09-10'), amount: 0.80, currency: 'USD' },
-    // Japanese stocks - semi-annual dividends
-    { symbol: '7203.T', exDate: new Date('2026-03-28'), paymentDate: new Date('2026-06-27'), amount: 75, currency: 'JPY' },
-    { symbol: '7203.T', exDate: new Date('2026-09-30'), paymentDate: new Date('2026-12-05'), amount: 75, currency: 'JPY' },
-    { symbol: '6758.T', exDate: new Date('2026-03-30'), paymentDate: new Date('2026-06-27'), amount: 45, currency: 'JPY' },
-    { symbol: '6758.T', exDate: new Date('2026-09-30'), paymentDate: new Date('2026-12-05'), amount: 45, currency: 'JPY' },
-    { symbol: '9984.T', exDate: new Date('2026-03-30'), paymentDate: new Date('2026-06-27'), amount: 55, currency: 'JPY' },
-    { symbol: '9984.T', exDate: new Date('2026-09-30'), paymentDate: new Date('2026-12-05'), amount: 55, currency: 'JPY' }
-  ];
+  private readonly mockDividendData: DividendData[] = MOCK_DIVIDEND_DATA;
 
   constructor(private http: HttpClient) {}
+
+  // ============ Stock Search Methods ============
 
   // Get stock info from Yahoo Finance (simplified mock for now)
   // In production, you would use Yahoo Finance API with proper CORS handling
   searchStock(query: string): Observable<YahooFinanceData[]> {
     // Mock data for demonstration - in real implementation, use Yahoo Finance API
-    const mockData: YahooFinanceData[] = [
-      { symbol: 'AAPL', shortName: 'Apple Inc.', regularMarketPrice: 189.79 },
-      { symbol: '7203.T', shortName: 'Toyota Motor Corporation', regularMarketPrice: 2891 },
-      { symbol: '6758.T', shortName: 'Sony Group Corporation', regularMarketPrice: 13540 },
-      { symbol: '9984.T', shortName: 'SoftBank Group Corp.', regularMarketPrice: 7342 },
-      { symbol: 'GOOGL', shortName: 'Alphabet Inc.', regularMarketPrice: 159.40 },
-      { symbol: 'MSFT', shortName: 'Microsoft Corporation', regularMarketPrice: 416.06 },
-      { symbol: 'TSLA', shortName: 'Tesla, Inc.', regularMarketPrice: 249.83 }
-    ];
-
-    return of(mockData.filter(stock => 
+    return of(MOCK_STOCK_DATA.filter(stock => 
       stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
       stock.shortName.toLowerCase().includes(query.toLowerCase())
     ));
   }
+
+  // ============ Stock Registration Methods ============
 
   // Save stock registration to local storage
   registerStock(stockData: Omit<StockData, 'id' | 'registeredAt'>): void {
@@ -96,12 +49,12 @@ export class StockService {
 
     const currentStocks = this.getRegisteredStocks();
     currentStocks.push(newStock);
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(currentStocks));
+    localStorage.setItem(STORAGE_KEYS.STOCK_REGISTRATIONS, JSON.stringify(currentStocks));
   }
 
   // Get all registered stocks from local storage
   getRegisteredStocks(): StockData[] {
-    const stored = localStorage.getItem(this.STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.STOCK_REGISTRATIONS);
     if (stored) {
       return JSON.parse(stored).map((stock: any) => ({
         ...stock,
@@ -115,20 +68,17 @@ export class StockService {
   removeStock(id: string): void {
     const currentStocks = this.getRegisteredStocks();
     const updatedStocks = currentStocks.filter(stock => stock.id !== id);
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedStocks));
+    localStorage.setItem(STORAGE_KEYS.STOCK_REGISTRATIONS, JSON.stringify(updatedStocks));
   }
 
-  // Generate unique ID
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
+  // ============ Dividend Calculation Methods ============
 
   // Get upcoming dividends for the next 12 months
   getUpcomingDividends(): DividendCalendarItem[] {
     const registeredStocks = this.getRegisteredStocks();
     const now = new Date();
-    const twelveMonthsFromNow = new Date();
-    twelveMonthsFromNow.setFullYear(now.getFullYear() + 1);
+    const futureDate = new Date();
+    futureDate.setMonth(now.getMonth() + DATE_CONSTANTS.MONTHS_AHEAD_FOR_DIVIDENDS);
 
     const upcomingDividends: DividendCalendarItem[] = [];
 
@@ -136,7 +86,7 @@ export class StockService {
       const stockDividends = this.mockDividendData.filter(dividend => 
         dividend.symbol === stock.symbol &&
         dividend.paymentDate >= now &&
-        dividend.paymentDate <= twelveMonthsFromNow
+        dividend.paymentDate <= futureDate
       );
 
       stockDividends.forEach(dividend => {
@@ -149,24 +99,28 @@ export class StockService {
     });
 
     // Sort by payment date
-    return upcomingDividends.sort((a, b) => a.dividend.paymentDate.getTime() - b.dividend.paymentDate.getTime());
+    return upcomingDividends.sort((a, b) => 
+      a.dividend.paymentDate.getTime() - b.dividend.paymentDate.getTime()
+    );
   }
 
   // Calculate total expected dividends for next 12 months
-  getTotalUpcomingDividends(): { jpy: number, usd: number } {
+  getTotalUpcomingDividends(): DividendTotals {
     const upcomingDividends = this.getUpcomingDividends();
-    let totalJPY = 0;
-    let totalUSD = 0;
+    
+    const totals = upcomingDividends.reduce(
+      (acc, item) => {
+        if (item.dividend.currency === 'JPY') {
+          acc.jpy += item.totalDividend;
+        } else if (item.dividend.currency === 'USD') {
+          acc.usd += item.totalDividend;
+        }
+        return acc;
+      },
+      { jpy: 0, usd: 0 }
+    );
 
-    upcomingDividends.forEach(item => {
-      if (item.dividend.currency === 'JPY') {
-        totalJPY += item.totalDividend;
-      } else if (item.dividend.currency === 'USD') {
-        totalUSD += item.totalDividend;
-      }
-    });
-
-    return { jpy: totalJPY, usd: totalUSD };
+    return totals;
   }
 
   // Get dividends by month for charting/calendar view
@@ -188,5 +142,12 @@ export class StockService {
     });
 
     return dividendsByMonth;
+  }
+
+  // ============ Private Utility Methods ============
+
+  // Generate unique ID
+  private generateId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }
 }

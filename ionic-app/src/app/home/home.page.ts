@@ -1,5 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { StockService, StockData, YahooFinanceData, DividendCalendarItem } from '../services/stock.service';
+import { StockService } from '../services/stock.service';
+import {
+  StockData,
+  YahooFinanceData,
+  DividendCalendarItem,
+  DividendTotals
+} from '../models';
+import { CurrencyUtils } from '../utils';
+import { VALIDATION_CONSTANTS } from '../constants';
 
 @Component({
   selector: 'app-home',
@@ -7,30 +15,40 @@ import { StockService, StockData, YahooFinanceData, DividendCalendarItem } from 
   styleUrls: ['home.page.scss'],
 })
 export class HomePage implements OnInit {
+  // ============ Form Properties ============
   searchQuery: string = '';
   selectedStock: YahooFinanceData | null = null;
   quantity: number = 1;
   customPrice: number | null = null;
   
+  // ============ Display Properties ============
   searchResults: YahooFinanceData[] = [];
   registeredStocks: StockData[] = [];
   showSearchResults: boolean = false;
 
-  // Dividend calendar data
+  // ============ Dividend Properties ============
   upcomingDividends: DividendCalendarItem[] = [];
-  totalUpcomingDividends: { jpy: number, usd: number } = { jpy: 0, usd: 0 };
+  totalUpcomingDividends: DividendTotals = { jpy: 0, usd: 0 };
   dividendsByMonth: { [month: string]: DividendCalendarItem[] } = {};
 
   constructor(private stockService: StockService) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
+    this.loadInitialData();
+  }
+
+  // ============ Initialization Methods ============
+
+  private loadInitialData(): void {
     this.loadRegisteredStocks();
     this.loadDividendData();
   }
 
+  // ============ Search Methods ============
+
   // Search for stocks using the service
-  onSearchInput() {
-    if (this.searchQuery.trim().length > 0) {
+  onSearchInput(): void {
+    if (this.searchQuery.trim().length >= VALIDATION_CONSTANTS.MIN_SEARCH_LENGTH) {
       this.stockService.searchStock(this.searchQuery).subscribe(
         results => {
           this.searchResults = results;
@@ -38,73 +56,91 @@ export class HomePage implements OnInit {
         }
       );
     } else {
-      this.searchResults = [];
-      this.showSearchResults = false;
+      this.clearSearchResults();
     }
   }
 
   // Select a stock from search results
-  selectStock(stock: YahooFinanceData) {
+  selectStock(stock: YahooFinanceData): void {
     this.selectedStock = stock;
     this.searchQuery = `${stock.symbol} - ${stock.shortName}`;
     this.customPrice = stock.regularMarketPrice || null;
     this.showSearchResults = false;
   }
 
-  // Register the selected stock
-  registerStock() {
-    if (this.selectedStock && this.quantity > 0) {
-      const stockData = {
-        symbol: this.selectedStock.symbol,
-        companyName: this.selectedStock.shortName,
-        price: this.customPrice || this.selectedStock.regularMarketPrice || 0,
-        quantity: this.quantity
-      };
-
-      this.stockService.registerStock(stockData);
-      this.loadRegisteredStocks();
-      this.loadDividendData(); // Refresh dividend data when stocks change
-      this.resetForm();
-    }
+  private clearSearchResults(): void {
+    this.searchResults = [];
+    this.showSearchResults = false;
   }
 
+  // ============ Stock Registration Methods ============
+
+  // Register the selected stock
+  registerStock(): void {
+    if (!this.isFormValid()) {
+      return;
+    }
+
+    const stockData = {
+      symbol: this.selectedStock!.symbol,
+      companyName: this.selectedStock!.shortName,
+      price: this.customPrice || this.selectedStock!.regularMarketPrice || 0,
+      quantity: this.quantity
+    };
+
+    this.stockService.registerStock(stockData);
+    this.refreshData();
+    this.resetForm();
+  }
+
+  // Remove a registered stock
+  removeStock(id: string): void {
+    this.stockService.removeStock(id);
+    this.refreshData();
+  }
+
+  // ============ Data Loading Methods ============
+
   // Load registered stocks from storage
-  loadRegisteredStocks() {
+  private loadRegisteredStocks(): void {
     this.registeredStocks = this.stockService.getRegisteredStocks();
   }
 
   // Load dividend data
-  loadDividendData() {
+  private loadDividendData(): void {
     this.upcomingDividends = this.stockService.getUpcomingDividends();
     this.totalUpcomingDividends = this.stockService.getTotalUpcomingDividends();
     this.dividendsByMonth = this.stockService.getDividendsByMonth();
   }
 
-  // Remove a registered stock
-  removeStock(id: string) {
-    this.stockService.removeStock(id);
+  private refreshData(): void {
     this.loadRegisteredStocks();
-    this.loadDividendData(); // Refresh dividend data when stocks change
+    this.loadDividendData();
   }
 
+  // ============ Form Utility Methods ============
+
   // Reset the form
-  resetForm() {
+  resetForm(): void {
     this.searchQuery = '';
     this.selectedStock = null;
     this.quantity = 1;
     this.customPrice = null;
-    this.searchResults = [];
-    this.showSearchResults = false;
+    this.clearSearchResults();
   }
 
   // Check if form is valid for registration
   isFormValid(): boolean {
-    return this.selectedStock !== null && this.quantity > 0 && (this.customPrice !== null && this.customPrice > 0);
+    return this.selectedStock !== null && 
+           this.quantity >= VALIDATION_CONSTANTS.MIN_QUANTITY && 
+           (this.customPrice !== null && this.customPrice >= VALIDATION_CONSTANTS.MIN_PRICE);
   }
+
+  // ============ Display Utility Methods ============
 
   // Calculate total value for a stock
   getTotalValue(stock: StockData): number {
-    return stock.price * stock.quantity;
+    return CurrencyUtils.calculateTotalValue(stock.price, stock.quantity);
   }
 
   // Get month names for dividend calendar
@@ -114,11 +150,6 @@ export class HomePage implements OnInit {
 
   // Format currency for display
   formatCurrency(amount: number, currency: string): string {
-    if (currency === 'JPY') {
-      return `¥${amount.toLocaleString('ja-JP')}`;
-    } else if (currency === 'USD') {
-      return `$${amount.toFixed(2)}`;
-    }
-    return `${amount.toFixed(2)} ${currency}`;
+    return CurrencyUtils.formatCurrency(amount, currency);
   }
 }
