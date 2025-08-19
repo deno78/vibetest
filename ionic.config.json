@@ -1,0 +1,7 @@
+{
+  "name": "vibetest",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
