@@ -18,9 +18,23 @@
   margin-top: 16px;
 }
 
+.update-button {
+  margin-bottom: 16px;
+}
+
 .registration-date {
   font-size: 12px;
   color: var(--ion-color-medium);
+}
+
+.gain {
+  color: var(--ion-color-success);
+  font-weight: bold;
+}
+
+.loss {
+  color: var(--ion-color-danger);
+  font-weight: bold;
 }
 
 .empty-state {

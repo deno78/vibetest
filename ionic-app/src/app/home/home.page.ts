@@ -15,6 +15,7 @@ export class HomePage implements OnInit {
   searchResults: YahooFinanceData[] = [];
   registeredStocks: StockData[] = [];
   showSearchResults: boolean = false;
+  isUpdatingPrices: boolean = false;
 
   constructor(private stockService: StockService) {}
 
@@ -48,10 +49,12 @@ export class HomePage implements OnInit {
   // Register the selected stock
   registerStock() {
     if (this.selectedStock && this.quantity > 0) {
+      const price = this.customPrice || this.selectedStock.regularMarketPrice || 0;
       const stockData = {
         symbol: this.selectedStock.symbol,
         companyName: this.selectedStock.shortName,
-        price: this.customPrice || this.selectedStock.regularMarketPrice || 0,
+        purchasePrice: price,
+        currentPrice: price, // Initially same as purchase price
         quantity: this.quantity
       };
 
@@ -89,6 +92,37 @@ export class HomePage implements OnInit {
 
   // Calculate total value for a stock
   getTotalValue(stock: StockData): number {
-    return stock.price * stock.quantity;
+    return stock.currentPrice * stock.quantity;
+  }
+
+  // Calculate total purchase value for a stock
+  getPurchaseValue(stock: StockData): number {
+    return stock.purchasePrice * stock.quantity;
+  }
+
+  // Calculate gain/loss for a stock
+  getGainLoss(stock: StockData): number {
+    return this.getTotalValue(stock) - this.getPurchaseValue(stock);
+  }
+
+  // Calculate gain/loss percentage for a stock
+  getGainLossPercentage(stock: StockData): number {
+    const purchaseValue = this.getPurchaseValue(stock);
+    if (purchaseValue === 0) return 0;
+    return ((this.getTotalValue(stock) - purchaseValue) / purchaseValue) * 100;
+  }
+
+  // Check if stock has gained value
+  isGain(stock: StockData): boolean {
+    return this.getGainLoss(stock) > 0;
+  }
+
+  // Update all stock prices
+  updateAllStockPrices() {
+    this.isUpdatingPrices = true;
+    this.stockService.updateAllStockPrices().subscribe(() => {
+      this.loadRegisteredStocks();
+      this.isUpdatingPrices = false;
+    });
   }
 }

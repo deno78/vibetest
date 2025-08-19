@@ -105,6 +105,17 @@
       </ion-card-header>
       
       <ion-card-content>
+        <!-- Update Prices Button -->
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          [disabled]="isUpdatingPrices"
+          (click)="updateAllStockPrices()"
+          class="update-button">
+          <ion-icon name="refresh" slot="start"></ion-icon>
+          {{isUpdatingPrices ? '更新中...' : '株価最新化'}}
+        </ion-button>
+        
         <ion-list>
           <ion-item *ngFor="let stock of registeredStocks">
             <ion-label>
@@ -112,8 +123,16 @@
               <p>{{stock.companyName}}</p>
               <p>
                 数量: {{stock.quantity}} | 
-                単価: ¥{{stock.price | number:'1.2-2'}} | 
-                総額: ¥{{getTotalValue(stock) | number:'1.2-2'}}
+                購入時単価: ¥{{stock.purchasePrice | number:'1.2-2'}} | 
+                現在単価: ¥{{stock.currentPrice | number:'1.2-2'}}
+              </p>
+              <p>
+                購入時総額: ¥{{getPurchaseValue(stock) | number:'1.2-2'}} | 
+                現在総額: ¥{{getTotalValue(stock) | number:'1.2-2'}}
+              </p>
+              <p [ngClass]="{'gain': isGain(stock), 'loss': !isGain(stock)}">
+                損益: ¥{{getGainLoss(stock) | number:'1.2-2'}} 
+                ({{getGainLossPercentage(stock) | number:'1.2-2'}}%)
               </p>
               <p class="registration-date">
                 登録日: {{stock.registeredAt | date:'yyyy/MM/dd HH:mm'}}
