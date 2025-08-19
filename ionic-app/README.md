@@ -39,7 +39,26 @@ npm run build
 ionic build
 ```
 
+GitHub Pages用にビルド（PWA対応）:
+```bash
+npm run build -- --configuration=production-gh-pages
+```
+
 ビルドされたファイルは `www/` ディレクトリに保存されます。
+
+## PWA機能
+
+このアプリはPWA（Progressive Web App）として設定されています：
+
+- **Service Worker**: オフライン機能とキャッシング
+- **Web App Manifest**: ホーム画面への追加とアプリライクな体験
+- **レスポンシブアイコン**: 複数サイズのアプリアイコン
+
+### PWA機能のテスト
+
+1. プロダクションビルドを実行
+2. HTTPSサーバーで配信（GitHub Pagesなど）
+3. ブラウザの開発者ツールでPWA機能を確認
 
 ## プロジェクト構成
 
