@@ -15,7 +15,21 @@ export interface StockData {
 export interface YahooFinanceData {
   symbol: string;
   shortName: string;
-  regularMarketPrice?: number;
+  longName?: string;
+  regularMarketPrice?: number | null;
+  currency?: string;
+  marketState?: string;
+  fullExchangeName?: string;
+  displayName?: string;
+}
+
+export interface YahooFinanceSearchResult {
+  symbol: string;
+  shortname?: string;
+  longname?: string;
+  exchDisp?: string;
+  typeDisp?: string;
+  quoteType?: string;
 }
 
 export interface DividendData {
@@ -66,10 +80,91 @@ export class StockService {
 
   constructor(private http: HttpClient) {}
 
-  // Get stock info from Yahoo Finance (simplified mock for now)
-  // In production, you would use Yahoo Finance API with proper CORS handling
+  // Get stock info from Yahoo Finance API
   searchStock(query: string): Observable<YahooFinanceData[]> {
-    // Mock data for demonstration - in real implementation, use Yahoo Finance API
+    if (!query || query.trim().length === 0) {
+      return of([]);
+    }
+
+    // Try multiple Yahoo Finance endpoints
+    return this.tryYahooFinanceSearch(query).pipe(
+      catchError(error => {
+        console.error('All Yahoo Finance endpoints failed, using fallback:', error);
+        return this.searchStockMock(query);
+      })
+    );
+  }
+
+  private tryYahooFinanceSearch(query: string): Observable<YahooFinanceData[]> {
+    // First try: Yahoo Finance search endpoint
+    const searchUrl = `/api/yahoo/v1/finance/search`;
+    const params = {
+      q: query.trim(),
+      quotes_count: '10',
+      news_count: '0'
+    };
+
+    return this.http.get<any>(searchUrl, { params }).pipe(
+      map(response => {
+        if (response && response.quotes) {
+          return response.quotes
+            .filter((quote: any) => 
+              quote.quoteType === 'EQUITY' || 
+              quote.quoteType === 'ETF' ||
+              quote.typeDisp === 'Equity'
+            )
+            .map((quote: any) => ({
+              symbol: quote.symbol,
+              shortName: quote.shortname || quote.longname || quote.symbol,
+              longName: quote.longname,
+              regularMarketPrice: undefined, // Will try to fetch separately
+              currency: quote.currency,
+              marketState: quote.marketState,
+              fullExchangeName: quote.exchDisp,
+              displayName: quote.displayName || quote.shortname || quote.symbol
+            } as YahooFinanceData));
+        }
+        return [];
+      }),
+      // If search fails, try alternative approach
+      catchError(() => this.tryFinancialModelingPrepAPI(query))
+    );
+  }
+
+  // Alternative free API - Financial Modeling Prep (has free tier)
+  private tryFinancialModelingPrepAPI(query: string): Observable<YahooFinanceData[]> {
+    // This is a free API that doesn't require CORS proxy
+    const apiUrl = `https://financialmodelingprep.com/api/v3/search`;
+    const params = {
+      query: query.trim(),
+      limit: '10',
+      apikey: 'demo' // Using demo key for testing
+    };
+
+    return this.http.get<any[]>(apiUrl, { params }).pipe(
+      map(response => {
+        if (Array.isArray(response)) {
+          return response.map(item => ({
+            symbol: item.symbol,
+            shortName: item.name || item.symbol,
+            longName: item.name,
+            regularMarketPrice: undefined,
+            currency: item.currency || 'USD',
+            fullExchangeName: item.exchangeShortName,
+            displayName: item.name || item.symbol
+          } as YahooFinanceData));
+        }
+        return [];
+      }),
+      catchError(() => {
+        // If both APIs fail, return empty array to trigger fallback
+        throw new Error('All external APIs failed');
+      })
+    );
+  }
+
+  // Fallback mock search for when API is unavailable
+  private searchStockMock(query: string): Observable<YahooFinanceData[]> {
     const mockData: YahooFinanceData[] = [
       { symbol: 'AAPL', shortName: 'Apple Inc.', regularMarketPrice: 189.79 },
       { symbol: '7203.T', shortName: 'Toyota Motor Corporation', regularMarketPrice: 2891 },
