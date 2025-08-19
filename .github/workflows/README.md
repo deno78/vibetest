@@ -70,7 +70,7 @@ iOS IPAをエクスポートするには、以下のリポジトリシークレ�
 
 1. **Node.js依存関係のエラー**
    - `package-lock.json` が最新であることを確認
-   - Node.jsバージョンが18であることを確認
+   - Node.jsバージョンが20であることを確認
 
 2. **Android ビルドエラー**
    - Gradle権限の問題: `chmod +x android/gradlew` が実行されているか確認
