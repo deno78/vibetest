@@ -38,6 +38,18 @@
         "maxSize": 100,
         "maxAge": "3d"
       }
+    },
+    {
+      "name": "yahoo-finance-api",
+      "urls": [
+        "/api/yahoo/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 50,
+        "maxAge": "1h",
+        "timeout": "5s"
+      }
     }
   ]
 }
