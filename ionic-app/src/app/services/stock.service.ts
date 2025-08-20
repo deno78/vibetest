@@ -28,8 +28,21 @@ export class StockService {
 
     return this.tryYahooFinanceSearch(query).pipe(
       catchError(error => {
-        console.error('All Yahoo Finance endpoints failed, using fallback:', error);
-        return this.searchStockMock(query);
+        console.error('Yahoo Finance search failed:', error);
+        // Try alternative API before giving up
+        return this.tryFinancialModelingPrepAPI(query).pipe(
+          catchError(altError => {
+            console.error('All external APIs failed, checking mock data for demo:', altError);
+            // For demo purposes, check if query matches mock data
+            const mockResults = filterByQuery(MOCK_STOCK_DATA, query, ['symbol', 'shortName']);
+            if (mockResults.length > 0) {
+              console.log('Found results in mock data for demo:', mockResults);
+              return of(mockResults);
+            }
+            // Return empty array if no matches found anywhere
+            return of([]);
+          })
+        );
       })
     );
   }
@@ -57,7 +70,7 @@ export class StockService {
               symbol: quote.symbol,
               shortName: quote.shortname || quote.longname || quote.symbol,
               longName: quote.longname,
-              regularMarketPrice: undefined, // Will try to fetch separately
+              regularMarketPrice: quote.regularMarketPrice, // Include price from search
               currency: quote.currency,
               marketState: quote.marketState,
               fullExchangeName: quote.exchDisp,
@@ -108,5 +121,42 @@ export class StockService {
    */
   private searchStockMock(query: string): Observable<YahooFinanceData[]> {
     return of(filterByQuery(MOCK_STOCK_DATA, query, ['symbol', 'shortName']));
+  }
+
+  /**
+   * Get stock quote by exact symbol - for validating specific stock codes
+   */
+  getStockBySymbol(symbol: string): Observable<YahooFinanceData | null> {
+    if (!isValidSearchQuery(symbol)) {
+      return of(null);
+    }
+
+    const params = {
+      q: symbol.trim(),
+      quotes_count: '1',
+      news_count: '0'
+    };
+
+    return this.http.get<any>(API_ENDPOINTS.YAHOO_FINANCE_SEARCH, { params }).pipe(
+      map(response => {
+        if (response && response.quotes && response.quotes.length > 0) {
+          const quote = response.quotes[0];
+          if (quote.symbol.toLowerCase() === symbol.toLowerCase()) {
+            return {
+              symbol: quote.symbol,
+              shortName: quote.shortname || quote.longname || quote.symbol,
+              longName: quote.longname,
+              regularMarketPrice: quote.regularMarketPrice,
+              currency: quote.currency,
+              marketState: quote.marketState,
+              fullExchangeName: quote.exchDisp,
+              displayName: quote.displayName || quote.shortname || quote.symbol
+            } as YahooFinanceData;
+          }
+        }
+        return null;
+      }),
+      catchError(() => of(null))
+    );
   }
 }
