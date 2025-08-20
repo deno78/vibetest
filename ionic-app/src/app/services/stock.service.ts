@@ -28,21 +28,18 @@ export class StockService {
 
     return this.tryYahooFinanceSearch(query).pipe(
       catchError(error => {
-        console.error('Yahoo Finance search failed:', error);
-        // Try alternative API before giving up
-        return this.tryFinancialModelingPrepAPI(query).pipe(
-          catchError(altError => {
-            console.error('All external APIs failed, checking mock data for demo:', altError);
-            // For demo purposes, check if query matches mock data
-            const mockResults = filterByQuery(MOCK_STOCK_DATA, query, ['symbol', 'shortName']);
-            if (mockResults.length > 0) {
-              console.log('Found results in mock data for demo:', mockResults);
-              return of(mockResults);
-            }
-            // Return empty array if no matches found anywhere
-            return of([]);
-          })
-        );
+        // Log error for debugging but don't expose to user
+        console.warn('Yahoo Finance API unavailable, using local data:', error.message);
+        
+        // Directly use mock data as fallback for PWA reliability
+        const mockResults = filterByQuery(MOCK_STOCK_DATA, query, ['symbol', 'shortName']);
+        if (mockResults.length > 0) {
+          console.log('Using local stock data:', mockResults.length, 'results found');
+          return of(mockResults);
+        }
+        
+        // Return empty array if no matches found
+        return of([]);
       })
     );
   }
@@ -79,41 +76,21 @@ export class StockService {
         }
         return [];
       }),
-      // If search fails, try alternative approach
-      catchError(() => this.tryFinancialModelingPrepAPI(query))
+      // If search fails, let main error handler deal with it
+      catchError(error => {
+        throw error;
+      })
     );
   }
 
   /**
-   * Alternative API fallback - Financial Modeling Prep
+   * Removed unreliable Financial Modeling Prep API to improve PWA stability
+   * This method is kept for backwards compatibility but no longer used
    */
   private tryFinancialModelingPrepAPI(query: string): Observable<YahooFinanceData[]> {
-    const params = {
-      query: query.trim(),
-      limit: SEARCH_CONFIG.LIMIT,
-      apikey: SEARCH_CONFIG.DEMO_API_KEY
-    };
-
-    return this.http.get<any[]>(API_ENDPOINTS.FINANCIAL_MODELING_PREP, { params }).pipe(
-      map(response => {
-        if (Array.isArray(response)) {
-          return response.map(item => ({
-            symbol: item.symbol,
-            shortName: item.name || item.symbol,
-            longName: item.name,
-            regularMarketPrice: undefined,
-            currency: item.currency || 'USD',
-            fullExchangeName: item.exchangeShortName,
-            displayName: item.name || item.symbol
-          } as YahooFinanceData));
-        }
-        return [];
-      }),
-      catchError(() => {
-        // If both APIs fail, return empty array to trigger fallback
-        throw new Error('All external APIs failed');
-      })
-    );
+    // This API was causing 401 Unauthorized and CORS issues in PWA environment
+    // Return empty array to allow fallback to mock data
+    return of([]);
   }
 
   /**

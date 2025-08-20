@@ -5,15 +5,15 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const API_ENDPOINTS = {
-  YAHOO_FINANCE_SEARCH: '/api/yahoo/v1/finance/search',
-  FINANCIAL_MODELING_PREP: 'https://financialmodelingprep.com/api/v3/search'
+  YAHOO_FINANCE_SEARCH: '/api/yahoo/v1/finance/search'
+  // Removed FINANCIAL_MODELING_PREP due to PWA compatibility issues
 } as const;
 
 export const SEARCH_CONFIG = {
   QUOTES_COUNT: '10',
   NEWS_COUNT: '0',
-  LIMIT: '10',
-  DEMO_API_KEY: 'demo'
+  LIMIT: '10'
+  // Removed DEMO_API_KEY as it's no longer needed
 } as const;
 
 export const CURRENCY_TYPES = {
