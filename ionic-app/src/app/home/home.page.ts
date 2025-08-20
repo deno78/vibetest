@@ -28,6 +28,10 @@ export class HomePage implements OnInit {
   searchResults: YahooFinanceData[] = [];
   registeredStocks: StockData[] = [];
   showSearchResults: boolean = false;
+  
+  // Error handling
+  searchError: string = '';
+  showSearchError: boolean = false;
 
   // Dividend calendar data
   upcomingDividends: DividendCalendarItem[] = [];
@@ -50,14 +54,28 @@ export class HomePage implements OnInit {
    */
   onSearchInput() {
     if (this.searchQuery.trim().length > 0) {
+      this.clearSearchError(); // Clear previous errors
       this.stockService.searchStock(this.searchQuery).subscribe(
         results => {
           this.searchResults = results;
           this.showSearchResults = results.length > 0;
+          
+          // Show error if no results found and search query was meaningful
+          if (results.length === 0 && this.searchQuery.trim().length > 2) {
+            this.showSearchError = true;
+            this.searchError = `「${this.searchQuery}」に該当する株式が見つかりませんでした。`;
+          }
+        },
+        error => {
+          console.error('Search error:', error);
+          this.showSearchError = true;
+          this.searchError = '株式検索中にエラーが発生しました。しばらく経ってから再度お試しください。';
+          this.clearSearchResults();
         }
       );
     } else {
       this.clearSearchResults();
+      this.clearSearchError();
     }
   }
 
@@ -69,6 +87,7 @@ export class HomePage implements OnInit {
     this.searchQuery = `${stock.symbol} - ${stock.shortName}`;
     this.customPrice = stock.regularMarketPrice || null;
     this.showSearchResults = false;
+    this.clearSearchError(); // Clear any error when stock is selected
   }
 
   /**
@@ -124,6 +143,7 @@ export class HomePage implements OnInit {
     this.quantity = 1;
     this.customPrice = null;
     this.clearSearchResults();
+    this.clearSearchError();
   }
 
   /**
@@ -132,6 +152,14 @@ export class HomePage implements OnInit {
   private clearSearchResults() {
     this.searchResults = [];
     this.showSearchResults = false;
+  }
+
+  /**
+   * Clear search error
+   */
+  private clearSearchError() {
+    this.searchError = '';
+    this.showSearchError = false;
   }
 
   /**

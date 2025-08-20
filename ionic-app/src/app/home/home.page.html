@@ -46,6 +46,14 @@
           </ion-item>
         </ion-list>
 
+        <!-- Search Error Message -->
+        <ion-item *ngIf="showSearchError" color="danger" lines="none">
+          <ion-icon name="alert-circle" slot="start"></ion-icon>
+          <ion-label>
+            <p>{{searchError}}</p>
+          </ion-label>
+        </ion-item>
+
         <!-- Selected Stock Info -->
         <div *ngIf="selectedStock" class="selected-stock">
           <ion-item>
