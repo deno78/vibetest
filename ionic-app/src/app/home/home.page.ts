@@ -1,5 +1,18 @@
 import { Component, OnInit } from '@angular/core';
-import { StockService, StockData, YahooFinanceData, DividendCalendarItem } from '../services/stock.service';
+import { StockService } from '../services/stock.service';
+import { StorageService } from '../services/storage.service';
+import { DividendService } from '../services/dividend.service';
+import { 
+  StockData, 
+  YahooFinanceData, 
+  DividendCalendarItem, 
+  DividendTotals 
+} from '../models';
+import { 
+  formatCurrency, 
+  calculateTotalValue, 
+  isStockFormValid 
+} from '../utils';
 
 @Component({
   selector: 'app-home',
@@ -18,17 +31,23 @@ export class HomePage implements OnInit {
 
   // Dividend calendar data
   upcomingDividends: DividendCalendarItem[] = [];
-  totalUpcomingDividends: { jpy: number, usd: number } = { jpy: 0, usd: 0 };
+  totalUpcomingDividends: DividendTotals = { jpy: 0, usd: 0 };
   dividendsByMonth: { [month: string]: DividendCalendarItem[] } = {};
 
-  constructor(private stockService: StockService) {}
+  constructor(
+    private stockService: StockService,
+    private storageService: StorageService,
+    private dividendService: DividendService
+  ) {}
 
   ngOnInit() {
     this.loadRegisteredStocks();
     this.loadDividendData();
   }
 
-  // Search for stocks using the service
+  /**
+   * Search for stocks using the service
+   */
   onSearchInput() {
     if (this.searchQuery.trim().length > 0) {
       this.stockService.searchStock(this.searchQuery).subscribe(
@@ -38,12 +57,13 @@ export class HomePage implements OnInit {
         }
       );
     } else {
-      this.searchResults = [];
-      this.showSearchResults = false;
+      this.clearSearchResults();
     }
   }
 
-  // Select a stock from search results
+  /**
+   * Select a stock from search results
+   */
   selectStock(stock: YahooFinanceData) {
     this.selectedStock = stock;
     this.searchQuery = `${stock.symbol} - ${stock.shortName}`;
@@ -51,7 +71,9 @@ export class HomePage implements OnInit {
     this.showSearchResults = false;
   }
 
-  // Register the selected stock
+  /**
+   * Register the selected stock
+   */
   registerStock() {
     if (this.selectedStock && this.quantity > 0) {
       const stockData = {
@@ -61,64 +83,82 @@ export class HomePage implements OnInit {
         quantity: this.quantity
       };
 
-      this.stockService.registerStock(stockData);
+      this.storageService.registerStock(stockData);
       this.loadRegisteredStocks();
-      this.loadDividendData(); // Refresh dividend data when stocks change
+      this.loadDividendData();
       this.resetForm();
     }
   }
 
-  // Load registered stocks from storage
+  /**
+   * Load registered stocks from storage
+   */
   loadRegisteredStocks() {
-    this.registeredStocks = this.stockService.getRegisteredStocks();
+    this.registeredStocks = this.storageService.getRegisteredStocks();
   }
 
-  // Load dividend data
+  /**
+   * Load dividend data
+   */
   loadDividendData() {
-    this.upcomingDividends = this.stockService.getUpcomingDividends();
-    this.totalUpcomingDividends = this.stockService.getTotalUpcomingDividends();
-    this.dividendsByMonth = this.stockService.getDividendsByMonth();
+    this.upcomingDividends = this.dividendService.getUpcomingDividends(this.registeredStocks);
+    this.totalUpcomingDividends = this.dividendService.getTotalUpcomingDividends(this.upcomingDividends);
+    this.dividendsByMonth = this.dividendService.getDividendsByMonth(this.upcomingDividends);
   }
 
-  // Remove a registered stock
+  /**
+   * Remove a registered stock
+   */
   removeStock(id: string) {
-    this.stockService.removeStock(id);
+    this.storageService.removeStock(id);
     this.loadRegisteredStocks();
-    this.loadDividendData(); // Refresh dividend data when stocks change
+    this.loadDividendData();
   }
 
-  // Reset the form
+  /**
+   * Reset the form
+   */
   resetForm() {
     this.searchQuery = '';
     this.selectedStock = null;
     this.quantity = 1;
     this.customPrice = null;
+    this.clearSearchResults();
+  }
+
+  /**
+   * Clear search results
+   */
+  private clearSearchResults() {
     this.searchResults = [];
     this.showSearchResults = false;
   }
 
-  // Check if form is valid for registration
+  /**
+   * Check if form is valid for registration
+   */
   isFormValid(): boolean {
-    return this.selectedStock !== null && this.quantity > 0 && (this.customPrice !== null && this.customPrice > 0);
+    return isStockFormValid(this.selectedStock, this.quantity, this.customPrice);
   }
 
-  // Calculate total value for a stock
+  /**
+   * Calculate total value for a stock
+   */
   getTotalValue(stock: StockData): number {
-    return stock.price * stock.quantity;
+    return calculateTotalValue(stock.price, stock.quantity);
   }
 
-  // Get month names for dividend calendar
+  /**
+   * Get month names for dividend calendar
+   */
   getMonthNames(): string[] {
     return Object.keys(this.dividendsByMonth);
   }
 
-  // Format currency for display
+  /**
+   * Format currency for display
+   */
   formatCurrency(amount: number, currency: string): string {
-    if (currency === 'JPY') {
-      return `¥${amount.toLocaleString('ja-JP')}`;
-    } else if (currency === 'USD') {
-      return `$${amount.toFixed(2)}`;
-    }
-    return `${amount.toFixed(2)} ${currency}`;
+    return formatCurrency(amount, currency);
   }
 }
