@@ -12,22 +12,45 @@ error: invalid source release: 21
 Capacitor 7.4.2 defaults to using Java 21, but the GitHub Actions CI environment uses Java 17, causing a compatibility mismatch.
 
 ### Fix Applied
-Updated Java compatibility settings in two key files:
+Updated Java compatibility settings to ensure all Android modules use Java 17:
 
-1. **capacitor-cordova-android-plugins/build.gradle**:
-   - Changed from Java 21 to Java 17
-   - This affects Cordova plugin compilation
+1. **build.gradle (root level)**:
+   - Added subprojects configuration to force Java 17 for all modules
+   - This overrides Capacitor's default Java 21 requirement
 
 2. **app/build.gradle**:
    - Added explicit Java 17 compatibility override
    - This ensures the main app compiles with Java 17
 
+3. **gradle.properties**:
+   - Added global Java compatibility properties
+   - Provides fallback configuration
+
 ### Changes Made
 ```gradle
+// In build.gradle (root)
+subprojects {
+    afterEvaluate {
+        if (it.hasProperty('android')) {
+            android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+}
+
+// In app/build.gradle
 compileOptions {
     sourceCompatibility JavaVersion.VERSION_17
     targetCompatibility JavaVersion.VERSION_17
 }
+
+// In gradle.properties
+android.compileOptions.sourceCompatibility=17
+android.compileOptions.targetCompatibility=17
 ```
 
 ## iOS Build Requirements
